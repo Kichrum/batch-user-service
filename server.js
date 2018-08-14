@@ -3,7 +3,7 @@ const app = require('express')(),
     axios = require('axios');
 
 app.use(bodyParser.json());
-app.listen(3005, () => console.log('Server is up and running'));
+app.listen(process.env.PORT || 3005, () => console.log('Server is up and running'));
 
 const prepareUrl = (url, userId) => {
     if (url.includes('{userId}')) {

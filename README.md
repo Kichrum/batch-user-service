@@ -19,6 +19,11 @@ Then you can use Postman to preform requests. Use the following Postman params:
 - Headers: Content-Type: application/json
 - Body: raw, JSON
 
+
+If you don't have free port 3005, then use the following syntax to use another port, for example, 80:
+
+`PORT=80 yarn start`
+
 ### Example request:
 
 POST /batch
