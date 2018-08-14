@@ -5,6 +5,11 @@ const app = require('express')(),
 app.use(bodyParser.json());
 app.listen(process.env.PORT || 3005, () => console.log('Server is up and running'));
 
+const concurrentRequestsTimeout = 10000,
+    concurrentRequestsAmount = 5;
+
+let amountOfSendingRequests = 0;
+
 const prepareUrl = (url, userId) => {
     if (url.includes('{userId}')) {
         return url.replace('{userId}', userId);
@@ -20,9 +25,27 @@ const prepareServiceRequests = (item, endpoint) => {
     };
 };
 
+const makeConcurrentServiceCall = item => {
+    return new Promise(resolve => {
+        if (amountOfSendingRequests >= concurrentRequestsAmount) {
+            setTimeout(() => resolve(makeConcurrentServiceCall(item)), concurrentRequestsTimeout);
+        } else {
+            amountOfSendingRequests++;
+            resolve(
+                axios(item)
+                    .then(() => amountOfSendingRequests--)
+                    .catch(() => {
+                        amountOfSendingRequests--;
+                        return Promise.reject(null);
+                    })
+            );
+        }
+    });
+};
+
 const makeServiceRequests = requests => {
-    return requests.map(item => axios(item)
-        .catch(() => axios(item))
+    return requests.map(item => makeConcurrentServiceCall(item)
+        .catch(() => makeConcurrentServiceCall(item))
         .then(() => ({success: true}))
         .catch(() => ({success: false}))
     );
