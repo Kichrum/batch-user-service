@@ -3,13 +3,31 @@ const app = require('express')(),
     axios = require('axios');
 
 app.use(bodyParser.json());
+
+/**
+ * To use another port, just run:
+ * PORT=80 yarn start
+ */
 app.listen(process.env.PORT || 3005, () => console.log('Server is up and running'));
 
+// Limit 5 requests per 10 seconds
 const concurrentRequestsTimeout = 10000,
     concurrentRequestsAmount = 5;
 
+/**
+ * Amount of sent requests without response yet
+ *
+ * @type {number}
+ */
 let amountOfSendingRequests = 0;
 
+/**
+ * This function replaces {userId} param in url with actual value
+ *
+ * @param url
+ * @param userId
+ * @returns {string}
+ */
 const prepareUrl = (url, userId) => {
     if (url.includes('{userId}')) {
         return url.replace('{userId}', userId);
@@ -17,6 +35,14 @@ const prepareUrl = (url, userId) => {
     return url;
 };
 
+
+/**
+ * This function converts payload item and endpoint objects to request params for axios
+ *
+ * @param item
+ * @param endpoint
+ * @returns {{method: string, url: string, body: Object}}
+ */
 const prepareServiceRequests = (item, endpoint) => {
     return {
         method: endpoint.verb,
@@ -25,6 +51,14 @@ const prepareServiceRequests = (item, endpoint) => {
     };
 };
 
+/**
+ * This function applies limitation: only 5 requests can be sent concurrently per 10 seconds.
+ * So that, if amountOfSendingRequests is more than 5,
+ * we apply timeout for 10 seconds and re-call this function recursively.
+ *
+ * @param item
+ * @returns {Promise<Object>}
+ */
 const makeConcurrentServiceCall = item => {
     return new Promise(resolve => {
         if (amountOfSendingRequests >= concurrentRequestsAmount) {
@@ -43,6 +77,12 @@ const makeConcurrentServiceCall = item => {
     });
 };
 
+/**
+ * This function makes requests to the service. If request fails, it retries once more.
+ *
+ * @param requests
+ * @returns {Promise<{success: boolean}>[]}
+ */
 const makeServiceRequests = requests => {
     return requests.map(item => makeConcurrentServiceCall(item)
         .catch(() => makeConcurrentServiceCall(item))
